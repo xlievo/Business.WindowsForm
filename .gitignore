@@ -3,3 +3,7 @@
 ################################################################################
 
 /.vs
+/Business.WindowsForm/obj
+/Business.WindowsForm/bin
+/Business.WindowsForm/.vs/Business.WindowsForm
+*.user
