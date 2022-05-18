@@ -37,7 +37,7 @@ namespace Business.WindowsForm
         const int HTBOTTOMLEFT = 0x10;
         const int HTBOTTOMRIGHT = 17;
 
-        readonly Panel titleBlock = new() { Height = 30, BackColor = Color.Transparent, Dock = DockStyle.Top };
+        readonly Panel titleBlock = new() { Height = TITLEBUTHEIGHT, BackColor = Color.Transparent, Dock = DockStyle.Top };
         readonly Label icoBox = new() { Anchor = AnchorStyles.Left, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), Location = new Point(0, 0) };
         readonly Label closeBox = new() { Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT) };
         readonly Label maximizeBox = new() { Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT) };
@@ -62,10 +62,7 @@ namespace Business.WindowsForm
 
             //closeBox.BackColor = maximizeBox.BackColor = minimizeBox.BackColor = Color.Red;
 
-            closeBox.Location = new Point(titleBlock.Width - (TITLEBUTWIDTH * 1), 0);
-            maximizeBox.Location = new Point(titleBlock.Width - (TITLEBUTWIDTH * 2), 0);
-            minimizeBox.Location = new Point(titleBlock.Width - (TITLEBUTWIDTH * 3), 0);
-            //titleText.Location = new Point((titleBlock.Width / 2) - TITLEBUTWIDTH, BORDERSIZE - 1);
+            SetTitleBoxWidth();
 
             titleBlock.SizeChanged += (object sender, EventArgs e) =>
             {
@@ -126,6 +123,42 @@ namespace Business.WindowsForm
             SetMouseStyle(closeBox, titleDownColor, titleUpColor);
             SetMouseStyle(maximizeBox, titleDownColor, titleUpColor);
             SetMouseStyle(minimizeBox, titleDownColor, titleUpColor);
+
+            Refresh();
+        }
+
+        void SetTitleHeight()
+        {
+            titleBlock.Height = TitleHeight;
+            closeBox.Height = TitleHeight;
+            maximizeBox.Height = TitleHeight;
+            minimizeBox.Height = TitleHeight;
+
+            Refresh();
+        }
+
+        void SetTitleBoxWidth()
+        {
+            closeBox.Width = TitleBoxWidth;
+            maximizeBox.Width = TitleBoxWidth;
+            minimizeBox.Width = TitleBoxWidth;
+
+            closeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 1), 0);
+
+            maximizeBox.Visible = MaximizeBox;
+            minimizeBox.Visible = MinimizeBox;
+
+            if (!MaximizeBox && MinimizeBox)
+            {
+                minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 2), 0);
+            }
+            else
+            {
+                maximizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 2), 0);
+                minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 3), 0);
+            }
+
+            Refresh();
         }
 
         protected override void WndProc(ref Message m) => BorderProc(ref m);
@@ -258,6 +291,24 @@ namespace Business.WindowsForm
         [Localizable(true)]
         public override Font Font { get => base.Font; set { base.Font = value; titleText.Font = value; Padding = new Padding(BORDERSIZE); } }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the Maximize button is displayed in the caption bar of the form.
+        /// </summary>
+        [DefaultValue(true)]
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public new bool MaximizeBox { get => base.MaximizeBox; set { base.MaximizeBox = value; SetTitleBoxWidth(); } }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the Minimize button is displayed in the caption bar of the form.
+        /// </summary>
+        [DefaultValue(true)]
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public new bool MinimizeBox { get => base.MinimizeBox; set { base.MinimizeBox = value; SetTitleBoxWidth(); } }
+
         Color titleColor = Color.SkyBlue;
         [Localizable(true)]
         [Browsable(true)]
@@ -270,7 +321,7 @@ namespace Business.WindowsForm
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Color TitleDownColor
         {
-            get => titleDownColor; set { titleDownColor = value; SetMouseStyle(); Refresh(); }
+            get => titleDownColor; set { titleDownColor = value; SetMouseStyle(); }
         }
 
         Color titleUpColor = Color.LightSkyBlue;
@@ -279,7 +330,7 @@ namespace Business.WindowsForm
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Color TitleUpColor
         {
-            get => titleUpColor; set { titleUpColor = value; SetMouseStyle(); Refresh(); }
+            get => titleUpColor; set { titleUpColor = value; SetMouseStyle(); }
         }
 
         [Localizable(true)]
@@ -301,5 +352,17 @@ namespace Business.WindowsForm
         [Browsable(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Image MinimizeBoxImage { get => minimizeBox.Image; set => minimizeBox.Image = value; }
+
+        int titleHeight = TITLEBUTHEIGHT;
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public int TitleHeight { get => titleHeight; set { titleHeight = value; SetTitleHeight(); } }
+
+        int titleBoxWidth = TITLEBUTWIDTH;
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public int TitleBoxWidth { get => titleBoxWidth; set { titleBoxWidth = value; SetTitleBoxWidth(); } }
     }
 }
