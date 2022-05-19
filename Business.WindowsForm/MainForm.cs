@@ -49,10 +49,10 @@ namespace Business.WindowsForm
             SuspendLayout();
 
             DoubleBuffered = true;
-            FormBorderStyle = FormBorderStyle.None;
+            base.FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
             windowState = new WindowState(WindowState, Location);
-            Padding = new Padding(BORDERSIZE);
+            //Padding = new Padding(BORDERSIZE);
             Text = "MainForm";
             Controls.Add(titleBlock);
 
@@ -96,14 +96,14 @@ namespace Business.WindowsForm
             base.OnSizeChanged(e);
 
             using var g = CreateGraphics();
-            DrawBorder(g, ClientRectangle, TitleColor);
+            DrawBorder(g, ClientRectangle, TitleColor, BORDERSIZE);
             Refresh();
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             base.OnPaintBackground(e);
-            DrawBorder(e.Graphics, ClientRectangle, TitleColor);
+            DrawBorder(e.Graphics, ClientRectangle, TitleColor, BorderSize);
             e.Dispose();
         }
 
@@ -145,8 +145,16 @@ namespace Business.WindowsForm
 
             closeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 1), 0);
 
-            maximizeBox.Visible = MaximizeBox;
-            minimizeBox.Visible = MinimizeBox;
+            if (!ControlBox)
+            {
+                closeBox.Visible = maximizeBox.Visible = minimizeBox.Visible = ControlBox;
+            }
+            else
+            {
+                maximizeBox.Visible = MaximizeBox;
+                minimizeBox.Visible = MinimizeBox;
+                closeBox.Visible = ControlBox;
+            }
 
             if (!MaximizeBox && MinimizeBox)
             {
@@ -158,20 +166,22 @@ namespace Business.WindowsForm
                 minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 3), 0);
             }
 
+            Padding = new Padding(BorderSize);
+
             Refresh();
         }
 
         protected override void WndProc(ref Message m) => BorderProc(ref m);
 
-        static void DrawBorder(Graphics g, Rectangle rect, Color color)
+        static void DrawBorder(Graphics g, Rectangle rect, Color color, int size)
         {
             if (0 == rect.Width || 0 == rect.Height) { return; }
 
             ControlPaint.DrawBorder(g, rect,
-                 color, BORDERSIZE, ButtonBorderStyle.Solid, //Left
-                 color, BORDERSIZE, ButtonBorderStyle.Solid, //Top
-                 color, BORDERSIZE, ButtonBorderStyle.Solid, //Right
-                 color, BORDERSIZE, ButtonBorderStyle.Solid);//Bottom
+                 color, size, ButtonBorderStyle.Solid, //Left
+                 color, size, ButtonBorderStyle.Solid, //Top
+                 color, size, ButtonBorderStyle.Solid, //Right
+                 color, size, ButtonBorderStyle.Solid);//Bottom
         }
 
         static void Gradient(Graphics g, Rectangle rect, Color color)
@@ -219,17 +229,22 @@ namespace Business.WindowsForm
                 case 0x0084:
                     base.WndProc(ref m);
 
+                    if (FormBorderFixed)
+                    {
+                        break;
+                    }
+
                     if (FormWindowState.Maximized == WindowState) { break; }
 
                     var vPoint = PointToClient(new((int)m.LParam & 0xFFFF, (int)m.LParam >> 16 & 0xFFFF));
 
-                    if (vPoint.X <= BORDERSIZE)
+                    if (vPoint.X <= BorderSize)
                     {
-                        if (vPoint.Y <= BORDERSIZE)
+                        if (vPoint.Y <= BorderSize)
                         {
                             m.Result = (IntPtr)HTTOPLEFT;
                         }
-                        else if (vPoint.Y >= ClientSize.Height - BORDERSIZE)
+                        else if (vPoint.Y >= ClientSize.Height - BorderSize)
                         {
                             m.Result = (IntPtr)HTBOTTOMLEFT;
                         }
@@ -238,13 +253,13 @@ namespace Business.WindowsForm
                             m.Result = (IntPtr)HTLEFT;
                         }
                     }
-                    else if (vPoint.X >= ClientSize.Width - BORDERSIZE)
+                    else if (vPoint.X >= ClientSize.Width - BorderSize)
                     {
-                        if (vPoint.Y <= BORDERSIZE)
+                        if (vPoint.Y <= BorderSize)
                         {
                             m.Result = (IntPtr)HTTOPRIGHT;
                         }
-                        else if (vPoint.Y >= ClientSize.Height - BORDERSIZE)
+                        else if (vPoint.Y >= ClientSize.Height - BorderSize)
                         {
                             m.Result = (IntPtr)HTBOTTOMRIGHT;
                         }
@@ -253,11 +268,11 @@ namespace Business.WindowsForm
                             m.Result = (IntPtr)HTRIGHT;
                         }
                     }
-                    else if (vPoint.Y <= BORDERSIZE)
+                    else if (vPoint.Y <= BorderSize)
                     {
                         m.Result = (IntPtr)HTTOP;
                     }
-                    else if (vPoint.Y >= ClientSize.Height - BORDERSIZE)
+                    else if (vPoint.Y >= ClientSize.Height - BorderSize)
                     {
                         m.Result = (IntPtr)HTBOTTOM;
                     }
@@ -276,6 +291,34 @@ namespace Business.WindowsForm
             }
         }
 
+        FormBorderStyle formBorderStyle;
+        /// <summary>
+        /// Gets or sets the border style of the form.
+        /// </summary>
+        [Browsable(false)]
+        [DefaultValue(FormBorderStyle.None)]
+        [System.Runtime.InteropServices.DispId(-504)]
+        public new FormBorderStyle FormBorderStyle { get => formBorderStyle; set { formBorderStyle = value; } }
+
+        bool formBorderFixed;
+        /// <summary>
+        /// Whether the border is fixed or not. It cannot be adjusted.
+        /// </summary>
+        [DefaultValue(false)]
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool FormBorderFixed { get => formBorderFixed; set { formBorderFixed = value; } }
+
+        int borderSize = 5;
+        /// <summary>
+        /// Border thickness size.
+        /// </summary>
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public int BorderSize { get => borderSize; set { borderSize = value; SetTitleBoxWidth(); } }
+
         /// <summary>
         /// Gets or sets the text associated with this control.
         /// </summary>
@@ -289,7 +332,21 @@ namespace Business.WindowsForm
         [AmbientValue(null)]
         [System.Runtime.InteropServices.DispId(-512)]
         [Localizable(true)]
-        public override Font Font { get => base.Font; set { base.Font = value; titleText.Font = value; Padding = new Padding(BORDERSIZE); } }
+        public override Font Font { get => base.Font; set { base.Font = value; SetTitleHeight(); SetTitleBoxWidth(); } }
+
+        [AmbientValue(null)]
+        [System.Runtime.InteropServices.DispId(-512)]
+        [Localizable(true)]
+        public Font TitleFont { get => titleText.Font; set { titleText.Font = value; SetTitleHeight(); SetTitleBoxWidth(); } }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a control box is displayed in the caption bar of the form.
+        /// </summary>
+        [DefaultValue(true)]
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public new bool ControlBox { get => base.ControlBox; set { base.ControlBox = value; SetTitleBoxWidth(); } }
 
         /// <summary>
         /// Gets or sets a value indicating whether the Maximize button is displayed in the caption bar of the form.
