@@ -6,7 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon />
     <StartupObject />
-    <Version>0.0.1.2</Version>
+    <Version>0.0.2</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/xlievo/Business.WindowsForm</PackageProjectUrl>
     <RepositoryUrl>https://github.com/xlievo/Business.WindowsForm</RepositoryUrl>

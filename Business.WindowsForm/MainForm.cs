@@ -166,7 +166,7 @@ namespace Business.WindowsForm
                 minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 3), 0);
             }
 
-            Padding = new Padding(BorderSize);
+            base.Padding = new Padding(BorderSize);
 
             Refresh();
         }
@@ -318,6 +318,14 @@ namespace Business.WindowsForm
         [Browsable(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public int BorderSize { get => borderSize; set { borderSize = value; SetTitleBoxWidth(); } }
+
+        Padding padding;
+        /// <summary>
+        /// Gets or sets padding within the control.
+        /// </summary>
+        //[Localizable(true)]
+        [Browsable(false)]
+        public new Padding Padding { get => padding; set => padding = value; }
 
         /// <summary>
         /// Gets or sets the text associated with this control.
