@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Design;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace Business.WindowsForm
 {
@@ -21,11 +22,17 @@ namespace Business.WindowsForm
 
     public class MainForm : Form
     {
+        static readonly System.Resources.ResourceManager resourceMan = new("Business.WindowsForm.MainForm", typeof(MainForm).Assembly);
+        static readonly Icon microsoft_icon = resourceMan.GetObject("microsoft_icon") as Icon;
+        static readonly Image microsoft_img = resourceMan.GetObject("microsoft_png") as Image;
+
+        readonly Size maximumSize;
+
         WindowState windowState;
         Point mousePoint;
 
         const int TITLEBUTWIDTH = 31;
-        const int TITLEBUTHEIGHT = 29;
+        const int TITLEBUTHEIGHT = 28;
 
         const int BORDERSIZE = 5;
         const int HTLEFT = 10;
@@ -37,51 +44,89 @@ namespace Business.WindowsForm
         const int HTBOTTOMLEFT = 0x10;
         const int HTBOTTOMRIGHT = 17;
 
-        readonly Panel titleBlock = new() { Height = TITLEBUTHEIGHT, BackColor = Color.Transparent, Dock = DockStyle.Top };
-        readonly Label icoBox = new() { Anchor = AnchorStyles.Left, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), Location = new Point(0, 0) };
-        readonly Label closeBox = new() { Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT) };
-        readonly Label maximizeBox = new() { Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT) };
-        readonly Label minimizeBox = new() { Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT) };
-        readonly Label titleText = new() { Dock = DockStyle.Top, AutoSize = false, TextAlign = ContentAlignment.BottomCenter, UseCompatibleTextRendering = false, Text = string.Empty, BackColor = Color.Transparent };
+        public readonly Panel TitleBlock = new() { Height = TITLEBUTHEIGHT, BackColor = Color.Transparent, Dock = DockStyle.Top, TabStop = false };
+        public readonly FlowLayoutPanel ControlBlock = new() { WrapContents = false, FlowDirection = FlowDirection.RightToLeft, Height = TITLEBUTHEIGHT, BackColor = Color.Transparent, Dock = DockStyle.Right };
+
+        readonly PictureBox iconBox = new() { Padding = new Padding(0), Anchor = AnchorStyles.Left, Dock = DockStyle.Left, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), Location = new Point(0, 0), SizeMode = PictureBoxSizeMode.Zoom };
+        readonly Label titleText = new() { Margin = new Padding(0), Dock = DockStyle.Fill, AutoSize = false, TextAlign = ContentAlignment.TopCenter, UseCompatibleTextRendering = false, Text = string.Empty, BackColor = Color.Transparent };
+
+        readonly PictureBox closeBox = new() { Margin = new Padding(1, 0, 0, 0), Padding = new Padding(3), Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), SizeMode = PictureBoxSizeMode.CenterImage };
+        readonly PictureBox maximizeBox = new() { Margin = new Padding(1, 0, 0, 0), Padding = new Padding(3), Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), SizeMode = PictureBoxSizeMode.CenterImage };
+        readonly PictureBox minimizeBox = new() { Margin = new Padding(0, 0, 0, 0), Padding = new Padding(3), Anchor = AnchorStyles.Right, BackColor = Color.Transparent, Size = new Size(TITLEBUTWIDTH, TITLEBUTHEIGHT), SizeMode = PictureBoxSizeMode.CenterImage };
+
+        readonly Control[] controlBoxs;
 
         public MainForm()
         {
             SuspendLayout();
 
+            maximumSize = Screen.FromHandle(Handle).WorkingArea.Size;
+
+            iconBox.Image = microsoft_img;
+            base.Icon = microsoft_icon;
+
+            AutoScaleMode = AutoScaleMode.Dpi;
             DoubleBuffered = true;
             base.FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
+
             windowState = new WindowState(WindowState, Location);
             //Padding = new Padding(BORDERSIZE);
             Text = "MainForm";
-            Controls.Add(titleBlock);
+            Controls.Add(TitleBlock);
 
             //titleText.Font = new Font(titleText.Font, FontStyle.Bold);
 
-            titleBlock.Controls.AddRange(new Control[] { icoBox, closeBox, maximizeBox, minimizeBox, titleText });
+            controlBoxs = new Control[] { closeBox, maximizeBox, minimizeBox };
+            ControlBlock.Controls.AddRange(controlBoxs);
+            //titleBlockControls = new Control[] { iconBox, titleText, minimizeBox, maximizeBox, closeBox };
+            TitleBlock.Controls.AddRange(new Control[] { titleText, iconBox, ControlBlock });
 
             //closeBox.BackColor = maximizeBox.BackColor = minimizeBox.BackColor = Color.Red;
 
             SetTitleBoxWidth();
 
-            titleBlock.SizeChanged += (object sender, EventArgs e) =>
+            TitleBlock.SizeChanged += (object sender, EventArgs e) =>
             {
                 using var g = CreateGraphics();
-                Gradient(g, titleBlock.ClientRectangle, TitleColor);
-                titleBlock.Refresh();
+                Gradient(g, TitleBlock.ClientRectangle, TitleColor);
+                TitleBlock.Refresh();
             };
-            titleBlock.Paint += (object sender, PaintEventArgs e) => { Gradient(e.Graphics, titleBlock.ClientRectangle, TitleColor); e.Dispose(); };
+            TitleBlock.Paint += (object sender, PaintEventArgs e) => { Gradient(e.Graphics, TitleBlock.ClientRectangle, TitleColor); e.Dispose(); };
 
-            WindowChanged(titleBlock);
+            WindowChanged(TitleBlock);
             WindowChanged(titleText);
-            WindowChanged(icoBox);
+            WindowChanged(iconBox);
+            WindowChanged(ControlBlock);
 
             SetMouseStyle();
-            closeBox.Click += (object sender, EventArgs e) => Close();
-            maximizeBox.Click += (object sender, EventArgs e) => WindowStateChanged();
-            minimizeBox.Click += (object sender, EventArgs e) => WindowState = FormWindowState.Minimized;
+
+            closeBox.Click += (object sender, EventArgs e) =>
+            {
+                if (e is MouseEventArgs mouse && MouseButtons.Left == mouse.Button)
+                {
+                    Close();
+                }
+            };
+            maximizeBox.Click += (object sender, EventArgs e) =>
+            {
+                if (e is MouseEventArgs mouse && MouseButtons.Left == mouse.Button)
+                {
+                    WindowStateChanged();
+                }
+            };
+            minimizeBox.Click += (object sender, EventArgs e) =>
+            {
+                if (e is MouseEventArgs mouse && MouseButtons.Left == mouse.Button)
+                {
+                    WindowState = FormWindowState.Minimized;
+                }
+            };
+
+            Shown += (object sender, EventArgs e) => SetTitleBoxWidth();
 
             ResumeLayout(false);
+            PerformLayout();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -96,7 +141,7 @@ namespace Business.WindowsForm
             base.OnSizeChanged(e);
 
             using var g = CreateGraphics();
-            DrawBorder(g, ClientRectangle, TitleColor, BORDERSIZE);
+            DrawBorder(g, ClientRectangle, TitleColor, BorderSize);
             Refresh();
         }
 
@@ -107,68 +152,94 @@ namespace Business.WindowsForm
             e.Dispose();
         }
 
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                const int WS_MINIMIZEBOX = 0x00020000;
+                var cp = base.CreateParams;
+                cp.Style |= WS_MINIMIZEBOX;
+                return cp;
+            }
+        }
+
         void WindowChanged(Control control)
         {
-            control.MouseDoubleClick += (object sender, MouseEventArgs e) => WindowStateChanged();
-            control.MouseDown += (object sender, MouseEventArgs e) => mousePoint = e.Location;
-            control.MouseMove += (object sender, MouseEventArgs e) =>
+            control.MouseDoubleClick += (object sender, MouseEventArgs e) =>
             {
                 if (MouseButtons.Left != e.Button) { return; }
-                SetDesktopLocation(Location.X + e.X - mousePoint.X, Location.Y + e.Y - mousePoint.Y);
+                if (FixedWindow) { return; }
+                WindowStateChanged();
             };
+            WindowMove(control);
         }
 
         void SetMouseStyle()
         {
-            SetMouseStyle(closeBox, titleDownColor, titleUpColor);
-            SetMouseStyle(maximizeBox, titleDownColor, titleUpColor);
-            SetMouseStyle(minimizeBox, titleDownColor, titleUpColor);
+            Utils.SetMouseStyle(closeBox, titleDownColor, titleUpColor);
+            Utils.SetMouseStyle(maximizeBox, titleDownColor, titleUpColor);
+            Utils.SetMouseStyle(minimizeBox, titleDownColor, titleUpColor);
 
-            Refresh();
+            TitleBlock.Refresh();
         }
 
         void SetTitleHeight()
         {
-            titleBlock.Height = TitleHeight;
+            TitleBlock.Height = TitleHeight;
             closeBox.Height = TitleHeight;
             maximizeBox.Height = TitleHeight;
             minimizeBox.Height = TitleHeight;
 
-            Refresh();
+            TitleBlock.Refresh();
         }
 
         void SetTitleBoxWidth()
         {
+            iconBox.Width = TitleBoxWidth;
             closeBox.Width = TitleBoxWidth;
             maximizeBox.Width = TitleBoxWidth;
             minimizeBox.Width = TitleBoxWidth;
 
-            closeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 1), 0);
+            iconBox.Visible = ShowIcon;
 
             if (!ControlBox)
             {
-                closeBox.Visible = maximizeBox.Visible = minimizeBox.Visible = ControlBox;
+                ControlBlock.Visible = closeBox.Visible = maximizeBox.Visible = minimizeBox.Visible = ControlBox;
             }
             else
             {
                 maximizeBox.Visible = MaximizeBox;
                 minimizeBox.Visible = MinimizeBox;
-                closeBox.Visible = ControlBox;
+                ControlBlock.Visible = closeBox.Visible = ControlBox;
             }
+
+            /*
+            closeBox.Location = new Point(TitleBlock.Width - (TitleBoxWidth * 1), 0);
 
             if (!MaximizeBox && MinimizeBox)
             {
-                minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 2), 0);
+                minimizeBox.Location = new Point(TitleBlock.Width - (TitleBoxWidth * 2), 0);
             }
             else
             {
-                maximizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 2), 0);
-                minimizeBox.Location = new Point(titleBlock.Width - (TitleBoxWidth * 3), 0);
+                maximizeBox.Location = new Point(TitleBlock.Width - (TitleBoxWidth * 2), 0);
+                minimizeBox.Location = new Point(TitleBlock.Width - (TitleBoxWidth * 3), 0);
             }
+            */
+
+            int controlBlockWidth = 0;
+
+            foreach (Control item in ControlBlock.Controls)
+            {
+                if (!item.Visible) { continue; }
+                controlBlockWidth += item.Width + item.Margin.Left + item.Margin.Right;
+            }
+
+            ControlBlock.Width = controlBlockWidth;
 
             base.Padding = new Padding(BorderSize);
 
-            Refresh();
+            TitleBlock.Refresh();
         }
 
         protected override void WndProc(ref Message m) => BorderProc(ref m);
@@ -193,10 +264,50 @@ namespace Business.WindowsForm
             g.FillRectangle(brush, rect);
         }
 
+        bool mouseDown;
+
+        public void WindowMove(Control control)
+        {
+            control.MouseDown += (object sender, MouseEventArgs e) =>
+            {
+                if (MouseButtons.Left != e.Button) { return; }
+                mousePoint = e.Location;
+                mouseDown = true;
+            };
+            control.MouseUp += (object sender, MouseEventArgs e) =>
+            {
+                if (MouseButtons.Left != e.Button || !mouseDown) { return; }
+                mouseDown = false;
+            };
+            control.MouseMove += (object sender, MouseEventArgs e) =>
+            {
+                if (!mouseDown) { return; }
+                SetDesktopLocation(Location.X + e.X - mousePoint.X, Location.Y + e.Y - mousePoint.Y);
+            };
+        }
+
+        public void WindowMove(ToolStripItem control)
+        {
+            control.MouseDown += (object sender, MouseEventArgs e) =>
+            {
+                mousePoint = e.Location;
+            };
+            control.MouseMove += (object sender, MouseEventArgs e) =>
+            {
+                if (MouseButtons.Left != e.Button) { return; }
+                SetDesktopLocation(Location.X + e.X - mousePoint.X, Location.Y + e.Y - mousePoint.Y);
+            };
+        }
+
         public void WindowStateChanged()
         {
             if (FormWindowState.Maximized != WindowState)
             {
+                if (MaximumSize.IsEmpty || MaximumSize.Height > maximumSize.Height || MaximumSize.Width > maximumSize.Width)
+                {
+                    MaximumSize = maximumSize;
+                }
+
                 windowState = new WindowState(WindowState, Location);
                 WindowState = FormWindowState.Maximized;
             }
@@ -207,29 +318,40 @@ namespace Business.WindowsForm
             }
         }
 
-        public static Label SetMouseStyle(Label label, Color downColor, Color upColor, bool cursorHand = true)
+        public void TitleBlockAdd(params Control[] control)
         {
-            label.MouseEnter += (sender, e) => (sender as Label).BackColor = upColor;// Color.LightSkyBlue;
-            label.MouseLeave += (sender, e) => (sender as Label).BackColor = Color.Transparent;
-            label.MouseDown += (sender, e) => (sender as Label).BackColor = downColor;//Color.DeepSkyBlue;
-            label.MouseUp += (sender, e) => (sender as Label).BackColor = upColor;//Color.LightSkyBlue;
-
-            if (cursorHand)
+            if (control is null)
             {
-                label.Cursor = Cursors.Hand;
+                throw new ArgumentNullException(nameof(control));
             }
 
-            return label;
+            if (!(control?.Any() ?? false))
+            {
+                return;
+            }
+
+            var controls = ControlBlock.Controls.Cast<Control>();
+            var except = controls.Except(controlBoxs).ToArray();
+            ControlBlock.Controls.Clear();
+            //controlBlock.Controls.AddRange(new Control[] { titleText, iconBox });
+            ControlBlock.Controls.AddRange(controlBoxs);
+            ControlBlock.Controls.AddRange(control);
+            if (0 < except.Length)
+            {
+                ControlBlock.Controls.AddRange(except);
+            }
+
+            //SetTitleBoxWidth();
         }
 
-        public void BorderProc(ref Message m)
+        public virtual void BorderProc(ref Message m)
         {
             switch (m.Msg)
             {
                 case 0x0084:
                     base.WndProc(ref m);
 
-                    if (FormBorderFixed)
+                    if (FixedWindow)
                     {
                         break;
                     }
@@ -300,17 +422,7 @@ namespace Business.WindowsForm
         [System.Runtime.InteropServices.DispId(-504)]
         public new FormBorderStyle FormBorderStyle { get => formBorderStyle; set { formBorderStyle = value; } }
 
-        bool formBorderFixed;
-        /// <summary>
-        /// Whether the border is fixed or not. It cannot be adjusted.
-        /// </summary>
-        [DefaultValue(false)]
-        [Localizable(true)]
-        [Browsable(true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool FormBorderFixed { get => formBorderFixed; set { formBorderFixed = value; } }
-
-        int borderSize = 5;
+        int borderSize = BORDERSIZE;
         /// <summary>
         /// Border thickness size.
         /// </summary>
@@ -357,6 +469,20 @@ namespace Business.WindowsForm
         public new bool ControlBox { get => base.ControlBox; set { base.ControlBox = value; SetTitleBoxWidth(); } }
 
         /// <summary>
+        /// Gets or sets a value indicating whether an icon is displayed in the caption bar of the form.
+        /// </summary>
+        [DefaultValue(true)]
+        public new bool ShowIcon { get => base.ShowIcon; set { base.ShowIcon = value; SetTitleBoxWidth(); } }
+
+        /// <summary>
+        /// Whether the border is fixed or not. It cannot be adjusted.
+        /// </summary>
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool FixedWindow { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether the Maximize button is displayed in the caption bar of the form.
         /// </summary>
         [DefaultValue(true)]
@@ -398,25 +524,73 @@ namespace Business.WindowsForm
             get => titleUpColor; set { titleUpColor = value; SetMouseStyle(); }
         }
 
-        [Localizable(true)]
-        [Browsable(true)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public Image IcoBoxImage { get => icoBox.Image; set => icoBox.Image = value; }
+        //[Localizable(true)]
+        //[Browsable(true)]
+        //[EditorBrowsable(EditorBrowsableState.Never)]
+        //public new Image Icon
+        //{
+        //    get => iconBox.Image ?? default;
+        //    set
+        //    {
+        //        iconBox.Image?.Dispose();
+        //        base.Icon?.Dispose();
+
+        //        if (null == value) { value = default; }
+
+        //        iconBox.Image = value;
+        //        base.Icon = value?.ToIcon(32);
+
+        //        TitleBlock.Refresh();
+        //    }
+        //}
 
         [Localizable(true)]
         [Browsable(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public Image CloseBoxImage { get => closeBox.Image; set => closeBox.Image = value; }
+        public new Image Icon
+        {
+            get => iconBox.Image ?? microsoft_img;
+            set
+            {
+                if (null != iconBox.Image && !microsoft_img.Equals(iconBox.Image))
+                {
+                    iconBox.Image.Dispose();
+                }
+
+                if (null != base.Icon && !microsoft_icon.Equals(base.Icon))
+                {
+                    base.Icon.Dispose();
+                }
+
+                if (null == value)
+                {
+                    iconBox.Image = microsoft_img;
+                    base.Icon = microsoft_icon;
+                }
+                else
+                {
+                    iconBox.Image = value;
+                    base.Icon = value.ToIcon(32);
+                }
+
+                TitleBlock.Refresh();
+            }
+        }
 
         [Localizable(true)]
         [Browsable(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public Image MaximizeBoxImage { get => maximizeBox.Image; set => maximizeBox.Image = value; }
+        public Image CloseBoxImage { get => closeBox.Image ?? default; set { closeBox.Image?.Dispose(); closeBox.Image = value; } }
 
         [Localizable(true)]
         [Browsable(true)]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public Image MinimizeBoxImage { get => minimizeBox.Image; set => minimizeBox.Image = value; }
+        public Image MaximizeBoxImage { get => maximizeBox.Image ?? default; set { maximizeBox.Image?.Dispose(); maximizeBox.Image = value; } }
+
+        [Localizable(true)]
+        [Browsable(true)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public Image MinimizeBoxImage { get => minimizeBox.Image ?? default; set { minimizeBox.Image?.Dispose(); minimizeBox.Image = value; } }
 
         int titleHeight = TITLEBUTHEIGHT;
         [Localizable(true)]
