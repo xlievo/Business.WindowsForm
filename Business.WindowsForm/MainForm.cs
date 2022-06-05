@@ -71,18 +71,12 @@ namespace Business.WindowsForm
             StartPosition = FormStartPosition.CenterScreen;
 
             windowState = new WindowState(WindowState, Location);
-            //Padding = new Padding(BORDERSIZE);
             Text = "MainForm";
             Controls.Add(TitleBlock);
 
-            //titleText.Font = new Font(titleText.Font, FontStyle.Bold);
-
             controlBoxs = new Control[] { closeBox, maximizeBox, minimizeBox };
             ControlBlock.Controls.AddRange(controlBoxs);
-            //titleBlockControls = new Control[] { iconBox, titleText, minimizeBox, maximizeBox, closeBox };
             TitleBlock.Controls.AddRange(new Control[] { titleText, iconBox, ControlBlock });
-
-            //closeBox.BackColor = maximizeBox.BackColor = minimizeBox.BackColor = Color.Red;
 
             SetTitleBoxWidth();
 
@@ -129,19 +123,9 @@ namespace Business.WindowsForm
             PerformLayout();
         }
 
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
-
-            Focus();
-        }
-
         protected override void OnSizeChanged(EventArgs e)
         {
             base.OnSizeChanged(e);
-
-            using var g = CreateGraphics();
-            DrawBorder(g, ClientRectangle, TitleColor, BorderSize);
             Refresh();
         }
 
@@ -290,11 +274,18 @@ namespace Business.WindowsForm
         {
             control.MouseDown += (object sender, MouseEventArgs e) =>
             {
+                if (MouseButtons.Left != e.Button) { return; }
                 mousePoint = e.Location;
+                mouseDown = true;
+            };
+            control.MouseUp += (object sender, MouseEventArgs e) =>
+            {
+                if (MouseButtons.Left != e.Button || !mouseDown) { return; }
+                mouseDown = false;
             };
             control.MouseMove += (object sender, MouseEventArgs e) =>
             {
-                if (MouseButtons.Left != e.Button) { return; }
+                if (!mouseDown) { return; }
                 SetDesktopLocation(Location.X + e.X - mousePoint.X, Location.Y + e.Y - mousePoint.Y);
             };
         }
@@ -333,7 +324,6 @@ namespace Business.WindowsForm
             var controls = ControlBlock.Controls.Cast<Control>();
             var except = controls.Except(controlBoxs).ToArray();
             ControlBlock.Controls.Clear();
-            //controlBlock.Controls.AddRange(new Control[] { titleText, iconBox });
             ControlBlock.Controls.AddRange(controlBoxs);
             ControlBlock.Controls.AddRange(control);
             if (0 < except.Length)
@@ -523,26 +513,6 @@ namespace Business.WindowsForm
         {
             get => titleUpColor; set { titleUpColor = value; SetMouseStyle(); }
         }
-
-        //[Localizable(true)]
-        //[Browsable(true)]
-        //[EditorBrowsable(EditorBrowsableState.Never)]
-        //public new Image Icon
-        //{
-        //    get => iconBox.Image ?? default;
-        //    set
-        //    {
-        //        iconBox.Image?.Dispose();
-        //        base.Icon?.Dispose();
-
-        //        if (null == value) { value = default; }
-
-        //        iconBox.Image = value;
-        //        base.Icon = value?.ToIcon(32);
-
-        //        TitleBlock.Refresh();
-        //    }
-        //}
 
         [Localizable(true)]
         [Browsable(true)]
